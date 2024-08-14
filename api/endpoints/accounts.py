@@ -3,12 +3,15 @@ from flask import jsonify, request
 
 class Accounts:
     def __init__(self):
-        self.accounts = []
+        self.accounts = [
+            {"id": "300", "balance": 0}
+        ]
 
-        # self.accounts = [
-        #     {"id": "100", "balance": 150},
-        #     {"id": "300", "balance": 3500},
-        # ]
+    def reset_state(self):
+        self.accounts = [
+            {"id": "300", "balance": 0}
+        ]
+        return jsonify("OK"), 200
 
     def add_account(self, account_id, balance):
         new_account = {"id": account_id, "balance": balance}

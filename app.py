@@ -6,6 +6,11 @@ app = Flask(__name__)
 accounts = Accounts()
 
 
+@app.route('/reset', methods=['POST'])
+def reset():
+    return accounts.reset_state()
+
+
 @app.route('/balance', methods=['GET'])
 def get_balance():
     return accounts.get_balance()
