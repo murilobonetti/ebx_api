@@ -37,19 +37,7 @@ def handle_events():
 
     result = accounts.process_event(event)
 
-    event_type = event.get("type")
-
-    if event_type == "deposit":
+    if result:
         return jsonify(result), 201
-    elif event_type == "withdraw":
-        if result is None:
-            return jsonify(0), 404
-        else:
-            return jsonify(result), 201
-    elif event_type == "transfer":
-        if result is None:
-            return jsonify(0), 404
-        else:
-            return jsonify(result), 201
-
-    return jsonify(result), 201
+    else:
+        return jsonify(0), 404

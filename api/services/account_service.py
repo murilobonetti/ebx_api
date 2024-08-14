@@ -31,7 +31,6 @@ class Accounts:
         return None
 
     def process_event(self, event):
-
         event_type = event.get("type")
         destination = event.get("destination")
         origin = event.get("origin")
@@ -48,10 +47,11 @@ class Accounts:
 
     def deposit_amount(self, account_id, amount):
         account = self.get_account(account_id)
-        if account is None:
-            self.add_account(account_id, amount)
-        else:
+
+        if account:
             self.update_balance(account_id, amount, is_deposit=True)
+        else:
+            self.add_account(account_id, amount)
 
         account = self.get_account(account_id)
         result = {
@@ -67,19 +67,23 @@ class Accounts:
         account = self.get_account(account_id)
 
         # Check if account exists, if not returns None
-        if account is None:
-            return None
+        if account:
+            new_balance = self.update_balance(
+                account_id,
+                amount,
+                is_deposit=False
+            )
 
-        new_balance = self.update_balance(account_id, amount, is_deposit=False)
-
-        self.get_account(account_id)
-        result = {
-            "origin": {
-                "id": account["id"],
-                "balance": new_balance
+            self.get_account(account_id)
+            result = {
+                "origin": {
+                    "id": account["id"],
+                    "balance": new_balance
+                }
             }
-        }
-        return result
+            return result
+
+        return None
 
     def transfer_amount(self, origin_id, amount, destination_id):
         origin_account = self.get_account(origin_id)
@@ -108,7 +112,8 @@ class Accounts:
     def get_balance(self, account_id):
         account = self.get_account(account_id)
 
-        if account is None:
+        # Check if account exists and returns its balance, otherwise returns None
+        if account:
+            return account["balance"]
+        else:
             return None
-
-        return account["balance"]
