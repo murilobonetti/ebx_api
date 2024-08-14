@@ -46,6 +46,15 @@ class Accounts:
 
         if event_type == "deposit":
             return self.deposit_amount(destination, amount)
+
+        elif event_type == "withdraw":
+            account = self.get_account(account_id=origin)
+
+            if account is None:
+                return self._invalid_request()
+
+            return self.withdraw_amount(origin, amount)
+
         else:
             return jsonify({"error": "Something went wrong!"})
 
@@ -64,6 +73,26 @@ class Accounts:
             }
         }
 
+        return jsonify(result), 201
+
+    def withdraw_amount(self, account_id, amount):
+        account = self.get_account(account_id)
+
+        if account is None:
+            return jsonify(0), 404
+
+        if account["balance"] < amount:
+            return jsonify({"error": "Insufficient balance"}), 401
+
+        new_balance = self.update_balance(account_id, amount, is_deposit=False)
+
+        self.get_account(account_id)
+        result = {
+            "origin": {
+                "id": account["id"],
+                "balance": new_balance
+            }
+        }
         return jsonify(result), 201
 
     def get_balance(self):
