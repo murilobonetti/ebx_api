@@ -1,138 +1,55 @@
 from flask import jsonify, request
 
+from api.services.account_service import Accounts
+from app import app
 
-class Accounts:
-    def __init__(self):
-        self.accounts = [
-            {"id": "300", "balance": 0}
-        ]
+accounts = Accounts()
 
-    def reset_state(self):
-        self.accounts = [
-            {"id": "300", "balance": 0}
-        ]
-        return jsonify("OK"), 200
 
-    def add_account(self, account_id, balance):
-        new_account = {"id": account_id, "balance": balance}
-        self.accounts.append(new_account)
+@app.route('/balance', methods=['GET'])
+def get_balance():
+    account_id = request.args.get("account_id")
+    result = accounts.get_balance(account_id)
 
-    def get_account(self, account_id):
-        for account in self.accounts:
-            if account["id"] == account_id:
-                return account
-        return None
-
-    def update_balance(self, account_id, amount, is_deposit):
-        account = self.get_account(account_id)
-        if account:
-            if is_deposit:
-                account["balance"] += amount
-                return account["balance"]
-            else:
-                account["balance"] -= amount
-                return account["balance"]
-        return None
-
-    def process_event(self):
-        event = request.get_json()
-        if "type" not in event:
-            return self._invalid_request()
-
-        if "amount" not in event:
-            return self._invalid_request()
-
-        event_type = event.get("type")
-        destination = event.get("destination")
-        origin = event.get("origin")
-        amount = event.get("amount")
-
-        if event_type == "deposit":
-            return self.deposit_amount(destination, amount)
-
-        elif event_type == "withdraw":
-            return self.withdraw_amount(origin, amount)
-
-        elif event_type == "transfer":
-            return self.transfer_amount(origin, amount, destination)
-
-        else:
-            return jsonify({"error": "Something went wrong!"})
-
-    def deposit_amount(self, account_id, amount):
-        account = self.get_account(account_id)
-        if account is None:
-            self.add_account(account_id, amount)
-        else:
-            self.update_balance(account_id, amount, is_deposit=True)
-
-        account = self.get_account(account_id)
-        result = {
-            "destination": {
-                "id": account["id"],
-                "balance": account["balance"]
-            }
-        }
-
-        return jsonify(result), 201
-
-    def withdraw_amount(self, account_id, amount):
-        account = self.get_account(account_id)
-
-        if account is None:
-            return jsonify(0), 404
-
-        if account["balance"] < amount:
-            return jsonify({"error": "Insufficient balance"}), 401
-
-        new_balance = self.update_balance(account_id, amount, is_deposit=False)
-
-        self.get_account(account_id)
-        result = {
-            "origin": {
-                "id": account["id"],
-                "balance": new_balance
-            }
-        }
-        return jsonify(result), 201
-
-    def transfer_amount(self, origin_id, amount, destination_id):
-        origin_account = self.get_account(origin_id)
-        destination_account = self.get_account(destination_id)
-
-        # Check if both accounts are not None
-        if origin_account is None or destination_account is None:
-            return jsonify(0), 404
-
-        # Check origin account's balance before executing the transfer
-        if origin_account["balance"] < amount:
-            return jsonify({"error": "Insufficient balance"}), 401
-
-        origin_account["balance"] -= amount
-        destination_account["balance"] += amount
-
-        return jsonify({
-            "origin": {
-                "id": origin_id,
-                "balance": origin_account["balance"]
-            },
-            "destination": {
-                "id": destination_id,
-                "balance": destination_account["balance"]
-            }
-        }), 201
-
-    def get_balance(self):
-        account_id = request.args.get("account_id")
-
-        account = self.get_account(account_id)
-
+    if result is None:
         # If account does not exist, returns 404 response code with balance 0.
-        if account is None:
-            return jsonify(0), 404
-
+        return jsonify(0), 404
+    else:
         # Returns account balance with 200 response code.
-        return jsonify(account["balance"]), 200
+        return jsonify(result), 200
 
-    def _invalid_request(self):
+
+@app.route('/reset', methods=['POST'])
+def reset():
+    accounts.reset_state()
+    return jsonify("OK"), 200
+
+
+@app.route('/event', methods=['POST'])
+def handle_events():
+    event = request.get_json()
+
+    if "type" not in event:
         return jsonify({"error": "Invalid request"}), 400
+
+    if "amount" not in event:
+        return jsonify({"error": "Invalid request"}), 400
+
+    result = accounts.process_event(event)
+
+    event_type = event.get("type")
+
+    if event_type == "deposit":
+        return jsonify(result), 201
+    elif event_type == "withdraw":
+        if result is None:
+            return jsonify(0), 404
+        else:
+            return jsonify(result), 201
+    elif event_type == "transfer":
+        if result is None:
+            return jsonify(0), 404
+        else:
+            return jsonify(result), 201
+
+    return jsonify(result), 201
