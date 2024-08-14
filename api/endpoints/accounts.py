@@ -1,4 +1,6 @@
-from flask import jsonify, request
+import json
+
+from flask import jsonify, request, Response
 
 from api.services.account_service import Accounts
 from app import app
@@ -50,10 +52,7 @@ def handle_events():
     """
     event = request.get_json()
 
-    if "type" not in event:
-        return jsonify({"error": "Invalid request"}), 400
-
-    if "amount" not in event:
+    if "type" not in event or "amount" not in event:
         return jsonify({"error": "Invalid request"}), 400
 
     result = accounts.process_event(event)
